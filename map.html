@@ -1,0 +1,1110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MostaClean | Live Map</title>
+    <link rel="icon" type="image/jpeg" href="img/leaf.jpg" />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, sans-serif;
+        color: #111827;
+        background: linear-gradient(180deg, #f8fafc 0%, #eefaf1 100%);
+      }
+
+      .page {
+        width: min(1240px, 94%);
+        margin: 1.25rem auto 1.5rem;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+      }
+
+      .back-link {
+        color: #111827;
+        text-decoration: none;
+        font-weight: 700;
+      }
+
+      .badge {
+        background-color: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+        border-radius: 999px;
+        padding: 0.35rem 0.85rem;
+        font-weight: 700;
+        font-size: 0.8rem;
+      }
+
+      .dashboard {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 1rem;
+        min-height: calc(100vh - 130px);
+      }
+
+      .sidebar {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 1rem;
+        padding: 1rem;
+        box-shadow: 0 16px 28px -24px rgba(17, 24, 39, 0.8);
+        display: flex;
+        flex-direction: column;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        font-size: 1.15rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+      }
+
+      .logo i {
+        color: #16a34a;
+      }
+
+      .green-text {
+        color: #16a34a;
+      }
+
+      .stats-box {
+        background: #dcfce7;
+        border: 1px solid #bbf7d0;
+        border-radius: 0.85rem;
+        padding: 0.8rem;
+        margin-bottom: 0.9rem;
+        text-align: center;
+        font-weight: 700;
+        color: #166534;
+      }
+
+      #full-bins-count {
+        font-size: 1.45rem;
+      }
+
+      #log-container {
+        min-height: 0;
+        flex: 1;
+      }
+
+      #sidebar-title {
+        margin: 0 0 0.6rem;
+        font-size: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 0.55rem;
+      }
+
+      #logs {
+        overflow-y: auto;
+        max-height: calc(100vh - 340px);
+        padding-right: 0.2rem;
+      }
+
+      .log-item {
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-left: 4px solid #ef4444;
+        border-radius: 0.65rem;
+        padding: 0.55rem 0.6rem;
+        margin-bottom: 0.55rem;
+      }
+
+      .log-item strong {
+        display: block;
+        font-size: 0.9rem;
+      }
+
+      .log-item span {
+        font-size: 0.75rem;
+        color: #4b5563;
+      }
+
+      .map-area {
+        position: relative;
+        border-radius: 1rem;
+        overflow: hidden;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 16px 28px -24px rgba(17, 24, 39, 0.8);
+        min-height: 70vh;
+      }
+
+      #map {
+        width: 100%;
+        height: 100%;
+        min-height: 70vh;
+        background: #0b1220;
+      }
+
+      #map .leaflet-tile {
+        filter: none;
+      }
+
+      .header-overlay {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        z-index: 1000;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        padding: 0;
+        min-width: 280px;
+        max-width: min(340px, calc(100% - 28px));
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+      }
+
+      .mobile-stats {
+        display: none;
+      }
+
+      .filter-wrap {
+        position: relative;
+      }
+
+      #municipality-select {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .filter-button {
+        width: 100%;
+        border: 1px solid rgba(22, 163, 74, 0.45);
+        background: rgba(255, 255, 255, 0.96);
+        color: #14532d;
+        border-radius: 0.8rem;
+        height: 2.35rem;
+        padding: 0 0.85rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        cursor: pointer;
+        box-shadow: 0 10px 24px -18px rgba(17, 24, 39, 0.9);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease,
+          background-color 0.2s ease;
+      }
+
+      .filter-button:hover {
+        background: #fff;
+      }
+
+      .filter-button:focus-visible {
+        outline: none;
+        border-color: #16a34a;
+        box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.14);
+      }
+
+      .filter-button i {
+        color: #16a34a;
+        font-size: 0.82rem;
+        transition: transform 0.2s ease;
+      }
+
+      .filter-wrap.open .filter-button i {
+        transform: rotate(180deg);
+      }
+
+      .filter-menu {
+        list-style: none;
+        margin: 0.45rem 0 0;
+        padding: 0.4rem;
+        position: absolute;
+        right: 0;
+        top: 100%;
+        width: 100%;
+        max-height: 280px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        background: #ffffff;
+        border: 1px solid #d1d5db;
+        border-radius: 0.8rem;
+        box-shadow: 0 16px 30px -22px rgba(17, 24, 39, 0.95);
+        display: none;
+        scrollbar-gutter: stable;
+        scrollbar-width: thin;
+        scrollbar-color: #16a34a #dcfce7;
+        background-clip: padding-box;
+        clip-path: inset(0 round 0.8rem);
+      }
+
+      .filter-wrap.open .filter-menu {
+        display: block;
+      }
+
+      .filter-item {
+        width: 100%;
+        border: none;
+        background: transparent;
+        text-align: left;
+        color: #14532d;
+        padding: 0.45rem 0.55rem;
+        border-radius: 0.45rem;
+        font-size: 0.92rem;
+        cursor: pointer;
+      }
+
+      .filter-item:hover {
+        background: #ecfdf5;
+      }
+
+      .filter-item.active {
+        background: #16a34a;
+        color: #fff;
+      }
+
+      .filter-menu::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .filter-menu::-webkit-scrollbar-track {
+        background: transparent;
+        margin: 6px 0;
+      }
+
+      .filter-menu::-webkit-scrollbar-thumb {
+        background: #16a34a;
+        border-radius: 999px;
+      }
+
+      .filter-menu::-webkit-scrollbar-button {
+        display: none;
+        width: 0;
+        height: 0;
+        background: transparent;
+      }
+
+      .filter-menu::-webkit-scrollbar-button:single-button {
+        display: none;
+        width: 0;
+        height: 0;
+      }
+
+      .filter-menu::-webkit-scrollbar-corner {
+        background: transparent;
+      }
+
+      .pin {
+        width: 24px;
+        height: 24px;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        border: 2px solid #fff;
+      }
+
+      .pin.red {
+        background: #ef4444;
+        animation: pulse 1.5s infinite;
+      }
+
+      .pin.green {
+        background: #22c55e;
+      }
+
+      .empty-btn {
+        width: 100%;
+        border: none;
+        border-radius: 0.45rem;
+        background: #16a34a;
+        color: #fff;
+        padding: 0.48rem 0.5rem;
+        cursor: pointer;
+        font-weight: 700;
+      }
+
+      .empty-btn:hover {
+        background: #15803d;
+      }
+
+      .mobile-report-fab {
+        display: none;
+        position: absolute;
+        left: 50%;
+        bottom: 18px;
+        transform: translateX(-50%);
+        width: 58px;
+        height: 58px;
+        border-radius: 999px;
+        border: 2px solid #bbf7d0;
+        background: #16a34a;
+        color: #fff;
+        font-size: 1.35rem;
+        box-shadow: 0 14px 28px -16px rgba(17, 24, 39, 0.95);
+        cursor: pointer;
+        z-index: 1200;
+      }
+
+      .mobile-report-fab:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.2);
+      }
+
+      .mobile-report-sheet {
+        position: absolute;
+        left: 12px;
+        right: 12px;
+        bottom: 90px;
+        z-index: 1250;
+        background: rgba(255, 255, 255, 0.98);
+        border: 1px solid #d1d5db;
+        border-radius: 0.95rem;
+        box-shadow: 0 16px 30px -20px rgba(17, 24, 39, 0.9);
+        padding: 0.9rem;
+        display: none;
+      }
+
+      .mobile-report-sheet.open {
+        display: block;
+      }
+
+      .mobile-report-sheet h3 {
+        margin: 0 0 0.55rem;
+        font-size: 1rem;
+        color: #14532d;
+      }
+
+      .mobile-report-sheet p {
+        margin: 0 0 0.7rem;
+        font-size: 0.84rem;
+        color: #4b5563;
+      }
+
+      .mobile-report-loading {
+        display: none;
+        align-items: center;
+        gap: 0.55rem;
+        margin: 0 0 0.8rem;
+        padding: 0.58rem 0.6rem;
+        border: 1px solid #bbf7d0;
+        border-radius: 0.7rem;
+        background: #ecfdf5;
+      }
+
+      .mobile-report-loading.active {
+        display: flex;
+      }
+
+      .gps-loader {
+        position: relative;
+        width: 1.45rem;
+        height: 1.45rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .gps-loader i {
+        color: #16a34a;
+        font-size: 0.75rem;
+        z-index: 2;
+      }
+
+      .gps-loader::before,
+      .gps-loader::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border: 2px solid rgba(22, 163, 74, 0.5);
+        border-radius: 999px;
+        animation: gpsPing 1.4s infinite;
+      }
+
+      .gps-loader::after {
+        animation-delay: 0.7s;
+      }
+
+      .mobile-report-loading span {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #166534;
+      }
+
+      .mobile-report-select {
+        width: 100%;
+        border: 1px solid #bbf7d0;
+        background: #f8fafc;
+        color: #14532d;
+        border-radius: 0.7rem;
+        padding: 0.6rem 0.65rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 0.8rem;
+      }
+
+      .mobile-report-actions {
+        display: flex;
+        gap: 0.6rem;
+      }
+
+      .mobile-report-action {
+        flex: 1;
+        border: none;
+        border-radius: 0.65rem;
+        padding: 0.58rem 0.45rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .mobile-report-action:disabled {
+        background: #d1d5db;
+        color: #6b7280;
+        cursor: not-allowed;
+        box-shadow: none;
+      }
+
+      .mobile-report-send {
+        background: #16a34a;
+        color: #fff;
+      }
+
+      .mobile-report-send:hover {
+        background: #15803d;
+      }
+
+      .mobile-report-cancel {
+        background: #e5e7eb;
+        color: #1f2937;
+      }
+
+      .mobile-report-cancel:hover {
+        background: #d1d5db;
+      }
+
+      .mobile-report-success {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: min(320px, calc(100% - 26px));
+        z-index: 1300;
+        background: #ffffff;
+        border: 1px solid #bbf7d0;
+        border-radius: 0.95rem;
+        box-shadow: 0 16px 30px -20px rgba(17, 24, 39, 0.95);
+        padding: 0.95rem;
+        display: none;
+        text-align: center;
+      }
+
+      .mobile-report-success.show {
+        display: block;
+      }
+
+      .mobile-report-success h4 {
+        margin: 0 0 0.45rem;
+        color: #166534;
+        font-size: 1rem;
+      }
+
+      .mobile-report-success p {
+        margin: 0;
+        color: #374151;
+        font-size: 0.86rem;
+      }
+
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+        }
+      }
+
+      @keyframes gpsPing {
+        0% {
+          transform: scale(0.7);
+          opacity: 0.9;
+        }
+        100% {
+          transform: scale(1.3);
+          opacity: 0;
+        }
+      }
+
+      @media (max-width: 980px) {
+        .dashboard {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          order: 2;
+        }
+
+        .map-area {
+          min-height: 68vh;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .page {
+          width: 96%;
+          margin-top: 0.8rem;
+        }
+
+        .sidebar {
+          display: none;
+        }
+
+        .map-area {
+          min-height: calc(100vh - 105px);
+        }
+
+        #map {
+          min-height: calc(100vh - 105px);
+        }
+
+        .header-overlay {
+          top: 10px;
+          left: auto;
+          right: 10px;
+          transform: none;
+          min-width: 0;
+          max-width: min(300px, calc(100% - 20px));
+          flex-direction: column;
+          align-items: stretch;
+          gap: 0.45rem;
+          padding: 0;
+        }
+
+        .mobile-stats {
+          display: block;
+          background: #ef4444;
+          color: #fff;
+          padding: 0.25rem 0.65rem;
+          border-radius: 999px;
+          text-align: center;
+          font-size: 0.85rem;
+          font-weight: 700;
+        }
+
+        .leaflet-top.leaflet-left {
+          top: 140px;
+        }
+
+        .mobile-report-fab {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <div class="topbar">
+        <a class="back-link" href="index.html"
+          ><i class="fas fa-arrow-left"></i> Back to Home</a
+        >
+        <span class="badge">Mostaganem Smart City</span>
+      </div>
+
+      <div class="dashboard">
+        <aside class="sidebar">
+          <div class="logo">
+            <i class="fas fa-leaf"></i>
+            <span>Mosta<span class="green-text">Clean</span></span>
+          </div>
+          <div class="stats-box">
+            <span id="full-bins-count">0</span> Full Containers
+          </div>
+          <div id="log-container">
+            <h2 id="sidebar-title">Alert Logs</h2>
+            <div id="logs"></div>
+          </div>
+        </aside>
+
+        <section class="map-area">
+          <div id="map"></div>
+          <button
+            type="button"
+            class="mobile-report-fab"
+            id="mobile-report-fab"
+            aria-label="Create report"
+          >
+            <i class="fas fa-plus" aria-hidden="true"></i>
+          </button>
+          <input
+            id="mobile-report-photo"
+            type="file"
+            accept="image/*"
+            capture="environment"
+            hidden
+          />
+          <div class="mobile-report-sheet" id="mobile-report-sheet">
+            <h3>New Report</h3>
+            <p>Select an issue type, then send your report.</p>
+            <div class="mobile-report-loading" id="mobile-report-loading">
+              <span class="gps-loader" aria-hidden="true">
+                <i class="fas fa-location-dot"></i>
+              </span>
+              <span>Fetching your coordinates, please wait...</span>
+            </div>
+            <select
+              id="mobile-report-issue"
+              class="mobile-report-select"
+              aria-label="Issue type"
+            >
+              <option value="">Choose issue type</option>
+              <option value="overflowing-bin">Overflowing bin</option>
+              <option value="random-trash">Random trash</option>
+              <option value="light-issue">Light issue</option>
+            </select>
+            <div class="mobile-report-actions">
+              <button
+                type="button"
+                class="mobile-report-action mobile-report-send"
+                id="mobile-report-send"
+              >
+                Send
+              </button>
+              <button
+                type="button"
+                class="mobile-report-action mobile-report-cancel"
+                id="mobile-report-cancel"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+          <div class="mobile-report-success" id="mobile-report-success">
+            <h4>Report submitted</h4>
+            <p>
+              Your report has been submitted successfully. Thank you for making
+              Mostaganem a better place.
+            </p>
+          </div>
+          <div class="header-overlay">
+            <div class="mobile-stats">
+              Full Container: <span id="full-bins-count-mobile">0</span>
+            </div>
+            <div class="filter-wrap" id="municipality-filter">
+              <button
+                type="button"
+                id="municipality-filter-button"
+                class="filter-button"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+              >
+                <span id="municipality-filter-label">All Municipalities</span>
+                <i class="fas fa-chevron-down" aria-hidden="true"></i>
+              </button>
+              <ul
+                id="municipality-filter-menu"
+                class="filter-menu"
+                role="listbox"
+                aria-label="Municipality options"
+              ></ul>
+              <select id="municipality-select" aria-label="Filter municipality">
+                <option value="all">All Municipalities</option>
+                <option value="mostaganem">Mostaganem</option>
+                <option value="khayr_eddine">Khayr Eddine</option>
+                <option value="sayada">Sayada</option>
+                <option value="ain_boudinar">Ain Boudinar</option>
+                <option value="ain_tedles">Ain Tedles</option>
+                <option value="sour">Sour</option>
+                <option value="sidi_belattar">Sidi Belattar</option>
+                <option value="oued_el_kheir">Oued El Kheir</option>
+                <option value="bouguirat">Bouguirat</option>
+                <option value="safsaf">Safsaf</option>
+                <option value="sirat">Sirat</option>
+                <option value="souaflia">Souaflia</option>
+                <option value="sidi_lakhdar">Sidi Lakhdar</option>
+                <option value="hadjadj">Hadjadj</option>
+                <option value="benabdelmalek_ramdane">
+                  Benabdelmalek Ramdane
+                </option>
+                <option value="sidi_ali">Sidi Ali</option>
+                <option value="ouled_maallah">Ouled Maallah</option>
+                <option value="tazgait">Tazgait</option>
+                <option value="mesra">Mesra</option>
+                <option value="ain_sidi_cherif">Ain Sidi Cherif</option>
+                <option value="mansourah">Mansourah</option>
+                <option value="touahria">Touahria</option>
+                <option value="achaacha">Achaacha</option>
+                <option value="khadra">Khadra</option>
+                <option value="nekmaria">Nekmaria</option>
+                <option value="ouled_boughalem">Ouled Boughalem</option>
+                <option value="hassi_mameche">Hassi Mameche</option>
+                <option value="mazagran">Mazagran</option>
+                <option value="stidia">Stidia</option>
+                <option value="ain_nouissy">Ain Nouissy</option>
+                <option value="fornaka">Fornaka</option>
+                <option value="el_hassiane">El Hassiane</option>
+              </select>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+      const cityCenters = {
+        mostaganem: [35.9331, 0.0897],
+        khayr_eddine: [35.9224, 0.1331],
+        sayada: [35.9382, 0.1256],
+        ain_boudinar: [35.91, 0.1833],
+        ain_tedles: [35.939, 0.3],
+        sour: [35.8833, 0.3],
+        sidi_belattar: [35.9754, 0.2338],
+        oued_el_kheir: [35.9083, 0.25],
+        bouguirat: [35.8242, 0.2292],
+        safsaf: [35.8167, 0.2667],
+        sirat: [35.8667, 0.25],
+        souaflia: [35.8458, 0.3542],
+        sidi_lakhdar: [36.1481, 0.4489],
+        hadjadj: [36.1042, 0.3458],
+        benabdelmalek_ramdane: [36.1242, 0.2708],
+        sidi_ali: [36.1, 0.4167],
+        ouled_maallah: [36.1083, 0.5333],
+        tazgait: [36.0167, 0.4667],
+        mesra: [35.8567, 0.1558],
+        ain_sidi_cherif: [35.8167, 0.1333],
+        mansourah: [35.8333, 0.0833],
+        touahria: [35.875, 0.1833],
+        achaacha: [36.25, 0.6333],
+        khadra: [36.2333, 0.5833],
+        nekmaria: [36.1833, 0.6],
+        ouled_boughalem: [36.2667, 0.7],
+        hassi_mameche: [35.8833, 0.0667],
+        mazagran: [35.8958, 0.0694],
+        stidia: [35.8333, -0.0167],
+        ain_nouissy: [35.8167, 0.0167],
+        fornaka: [35.75, -0.0167],
+        el_hassiane: [35.7833, -0.05],
+      };
+
+      const municipalitySelect = document.getElementById("municipality-select");
+      const municipalityFilter = document.getElementById("municipality-filter");
+      const municipalityFilterButton = document.getElementById(
+        "municipality-filter-button"
+      );
+      const municipalityFilterLabel = document.getElementById(
+        "municipality-filter-label"
+      );
+      const municipalityFilterMenu = document.getElementById(
+        "municipality-filter-menu"
+      );
+      const logsContainer = document.getElementById("logs");
+      const fullCountDesktop = document.getElementById("full-bins-count");
+      const fullCountMobile = document.getElementById("full-bins-count-mobile");
+      const mobileReportFab = document.getElementById("mobile-report-fab");
+      const mobileReportPhotoInput = document.getElementById("mobile-report-photo");
+      const mobileReportSheet = document.getElementById("mobile-report-sheet");
+      const mobileReportIssueSelect = document.getElementById("mobile-report-issue");
+      const mobileReportSendButton = document.getElementById("mobile-report-send");
+      const mobileReportCancelButton = document.getElementById("mobile-report-cancel");
+      const mobileReportSuccess = document.getElementById("mobile-report-success");
+      const mobileReportLoading = document.getElementById("mobile-report-loading");
+
+      const map = L.map("map").setView([35.9331, 0.0897], 11);
+      L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        { maxZoom: 19 }
+      ).addTo(map);
+
+      let bins = [];
+      let markersLayer = L.layerGroup().addTo(map);
+
+      function generateInitialData() {
+        const municipalities = Object.keys(cityCenters);
+        let idCounter = 1;
+
+        municipalities.forEach((municipality) => {
+          const center = cityCenters[municipality];
+          const binsPerMunicipality =
+            municipality === "mostaganem" ? 27 : 7;
+          for (let i = 0; i < binsPerMunicipality; i += 1) {
+            const randomLat = center[0] + (Math.random() - 0.5) * 0.015;
+            const randomLng = center[1] + (Math.random() - 0.5) * 0.015;
+            const isFull = Math.random() > 0.7;
+
+            bins.push({
+              id: idCounter,
+              municipality,
+              name: `Bin ${municipality.replace("_", " ")} #${i + 1}`,
+              lat: randomLat,
+              lng: randomLng,
+              isFull,
+              date: isFull ? "2026-02-14" : "",
+              time: isFull
+                ? `${String(Math.floor(Math.random() * 24)).padStart(
+                    2,
+                    "0"
+                  )}:${String(Math.floor(Math.random() * 60)).padStart(2, "0")}`
+                : "",
+            });
+
+            idCounter += 1;
+          }
+        });
+      }
+
+      function updateFullBinsCount() {
+        const fullBins = bins.filter((bin) => bin.isFull).length;
+        if (fullCountDesktop) fullCountDesktop.textContent = String(fullBins);
+        if (fullCountMobile) fullCountMobile.textContent = String(fullBins);
+      }
+
+      function createPopupHtml(bin) {
+        const googleMapsUrl = `https://www.google.com/maps?q=${bin.lat},${bin.lng}`;
+        if (!bin.isFull) {
+          return `
+            <div style="min-width:150px;color:#111827;">
+              <h4 style="margin:0 0 8px;font-size:14px;">${bin.name}</h4>
+              <p style="margin:0;color:#16a34a;font-size:12px;">Bin is empty</p>
+            </div>
+          `;
+        }
+
+        return `
+          <div style="min-width:165px;color:#111827;">
+            <h4 style="margin:0 0 8px;font-size:14px;">${bin.name}</h4>
+            <p style="margin:0 0 3px;font-size:12px;"><strong>Date:</strong> ${bin.date}</p>
+            <p style="margin:0 0 8px;font-size:12px;"><strong>Time:</strong> ${bin.time}</p>
+            <a href="${googleMapsUrl}" target="_blank" style="display:block;text-align:center;background:#2563eb;color:#fff;padding:6px;border-radius:6px;text-decoration:none;font-size:12px;margin-bottom:6px;">Navigate via GPS</a>
+            <button onclick="markAsEmpty(${bin.id})" class="empty-btn">Mark as Emptied</button>
+          </div>
+        `;
+      }
+
+      function drawMarkers(dataToDraw) {
+        markersLayer.clearLayers();
+        logsContainer.innerHTML = "";
+
+        dataToDraw.forEach((bin) => {
+          const pinColor = bin.isFull ? "red" : "green";
+          const icon = L.divIcon({
+            className: "custom-icon",
+            html: `<div class="pin ${pinColor}"></div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 24],
+          });
+
+          const marker = L.marker([bin.lat, bin.lng], { icon });
+          marker.bindPopup(createPopupHtml(bin));
+          marker.addTo(markersLayer);
+
+          if (bin.isFull) {
+            const item = document.createElement("div");
+            item.className = "log-item";
+            item.innerHTML = `<strong>${bin.name}</strong><span>Date: ${bin.date} | Time: ${bin.time}</span>`;
+            logsContainer.appendChild(item);
+          }
+        });
+
+        updateFullBinsCount();
+      }
+
+      function filterByMunicipality() {
+        const selected = municipalitySelect.value;
+        if (selected === "all") {
+          map.flyTo([35.9331, 0.0897], 11);
+          drawMarkers(bins);
+          return;
+        }
+
+        if (cityCenters[selected]) {
+          map.flyTo(cityCenters[selected], 13.5);
+          drawMarkers(bins.filter((bin) => bin.municipality === selected));
+        }
+      }
+
+      function syncFilterLabel() {
+        const activeOption =
+          municipalitySelect.options[municipalitySelect.selectedIndex];
+        municipalityFilterLabel.textContent = activeOption
+          ? activeOption.textContent
+          : "All Municipalities";
+
+        municipalityFilterMenu
+          .querySelectorAll(".filter-item")
+          .forEach((item) => {
+            const isActive = item.dataset.value === municipalitySelect.value;
+            item.classList.toggle("active", isActive);
+            item.setAttribute("aria-selected", String(isActive));
+          });
+      }
+
+      function buildCustomFilterMenu() {
+        municipalityFilterMenu.innerHTML = "";
+        Array.from(municipalitySelect.options).forEach((option) => {
+          const listItem = document.createElement("li");
+          const optionButton = document.createElement("button");
+          optionButton.type = "button";
+          optionButton.className = "filter-item";
+          optionButton.dataset.value = option.value;
+          optionButton.textContent = option.textContent;
+          optionButton.addEventListener("click", () => {
+            municipalitySelect.value = option.value;
+            municipalityFilter.classList.remove("open");
+            municipalityFilterButton.setAttribute("aria-expanded", "false");
+            municipalitySelect.dispatchEvent(new Event("change"));
+            syncFilterLabel();
+          });
+          listItem.appendChild(optionButton);
+          municipalityFilterMenu.appendChild(listItem);
+        });
+        syncFilterLabel();
+      }
+
+      window.markAsEmpty = function markAsEmpty(id) {
+        const bin = bins.find((entry) => entry.id === id);
+        if (!bin) return;
+        bin.isFull = false;
+        bin.date = "";
+        bin.time = "";
+        filterByMunicipality();
+      };
+
+      municipalitySelect.addEventListener("change", filterByMunicipality);
+      municipalitySelect.addEventListener("change", syncFilterLabel);
+
+      municipalityFilterButton.addEventListener("click", () => {
+        const isOpen = municipalityFilter.classList.toggle("open");
+        municipalityFilterButton.setAttribute("aria-expanded", String(isOpen));
+      });
+
+      document.addEventListener("click", (event) => {
+        if (!municipalityFilter.contains(event.target)) {
+          municipalityFilter.classList.remove("open");
+          municipalityFilterButton.setAttribute("aria-expanded", "false");
+        }
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          municipalityFilter.classList.remove("open");
+          municipalityFilterButton.setAttribute("aria-expanded", "false");
+        }
+      });
+
+      let selectedReportPhoto = null;
+      let reportLoadingTimer = null;
+      let reportCoordinatesLoading = false;
+      const mobileScreen = window.matchMedia("(max-width: 768px)");
+
+      function setReportControlsEnabled(enabled) {
+        mobileReportSendButton.disabled = !enabled;
+        mobileReportCancelButton.disabled = !enabled;
+        mobileReportIssueSelect.disabled = !enabled;
+      }
+
+      function startCoordinatesLoadingState() {
+        reportCoordinatesLoading = true;
+        setReportControlsEnabled(false);
+        mobileReportLoading.classList.add("active");
+        if (reportLoadingTimer) clearTimeout(reportLoadingTimer);
+        reportLoadingTimer = setTimeout(() => {
+          reportCoordinatesLoading = false;
+          mobileReportLoading.classList.remove("active");
+          setReportControlsEnabled(true);
+          reportLoadingTimer = null;
+        }, 5000);
+      }
+
+      function resetMobileReportFlow() {
+        if (reportLoadingTimer) {
+          clearTimeout(reportLoadingTimer);
+          reportLoadingTimer = null;
+        }
+        reportCoordinatesLoading = false;
+        selectedReportPhoto = null;
+        mobileReportPhotoInput.value = "";
+        mobileReportIssueSelect.value = "";
+        mobileReportIssueSelect.disabled = false;
+        mobileReportLoading.classList.remove("active");
+        setReportControlsEnabled(true);
+        mobileReportSheet.classList.remove("open");
+        mobileReportSuccess.classList.remove("show");
+      }
+
+      if (mobileReportFab && mobileReportPhotoInput && mobileReportSheet) {
+        mobileReportFab.addEventListener("click", () => {
+          if (!mobileScreen.matches) return;
+          mobileReportPhotoInput.click();
+        });
+
+        mobileReportPhotoInput.addEventListener("change", () => {
+          const [file] = mobileReportPhotoInput.files || [];
+          if (!file) return;
+          selectedReportPhoto = file;
+          mobileReportSheet.classList.add("open");
+          mobileReportSuccess.classList.remove("show");
+          startCoordinatesLoadingState();
+        });
+
+        mobileReportCancelButton.addEventListener("click", () => {
+          if (reportCoordinatesLoading) return;
+          resetMobileReportFlow();
+        });
+
+        mobileReportSendButton.addEventListener("click", () => {
+          if (reportCoordinatesLoading) return;
+          if (!selectedReportPhoto) return;
+          if (!mobileReportIssueSelect.value) {
+            window.alert("Please choose an issue type before sending.");
+            return;
+          }
+          mobileReportSheet.classList.remove("open");
+          mobileReportSuccess.classList.add("show");
+          setTimeout(() => {
+            resetMobileReportFlow();
+          }, 2200);
+        });
+
+        mobileScreen.addEventListener("change", () => {
+          if (!mobileScreen.matches) {
+            resetMobileReportFlow();
+          }
+        });
+      }
+
+      generateInitialData();
+      buildCustomFilterMenu();
+      drawMarkers(bins);
+
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 300);
+
+      window.addEventListener("resize", () => {
+        map.invalidateSize();
+      });
+    </script>
+  </body>
+</html>
